@@ -420,6 +420,33 @@
     }
   }
 
+  .unique-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .unique-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .unique-tab.active {
+    background: var(--surface2);
+    color: #fff;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  .unique-tab:hover:not(.active) {
+    background: var(--bg);
+  }
+
   /* Scrollbar */
   .column-body::-webkit-scrollbar { width: 6px; }
   .column-body::-webkit-scrollbar-track { background: transparent; }
@@ -493,6 +520,10 @@
     <div class="column-header">
       Unique Tasks <span class="count purple" id="countUnique">0</span>
     </div>
+    <div class="unique-tabs" id="uniqueTabs">
+      <button class="unique-tab active" data-tab="old" onclick="switchUniqueTab('old')">Show Old</button>
+      <button class="unique-tab" data-tab="new" onclick="switchUniqueTab('new')">Show New</button>
+    </div>
     <div class="column-body" id="colUnique">
       <div class="empty-state">Tasks found in only one league</div>
     </div>
@@ -505,6 +536,7 @@ let tasksA = [], tasksB = [];
 let sameTasks = [], similarTasks = [], uniqueTasks = [];
 let activeTiers = new Set(['easy', 'medium', 'hard', 'elite', 'master']);
 let activeRegions = new Set();
+let activeUniqueTab = 'old';
 let leagueAName = 'League A', leagueBName = 'League B';
 
 // ── Status helpers ──
@@ -737,7 +769,7 @@ function tierBadge(tier) {
 
 function renderTaskCard(task) {
   return `
-    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml(task.area.toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
+    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml((task.area || 'General').toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(task.name)}</span>
         ${tierBadge(task.tier)}
@@ -772,7 +804,7 @@ function renderSimilarCard(pair) {
   const tierToShow = a.tier || b.tier;
 
   return `
-    <div class="task-card" data-tier="${tierToShow}" data-area="${escHtml((a.area || b.area).toLowerCase())}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
+    <div class="task-card" data-tier="${tierToShow}" data-area="${escHtml((a.area || b.area || 'General').toLowerCase())}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(a.name)}</span>
         ${tierBadge(tierToShow)}
@@ -793,7 +825,7 @@ function renderUniqueCard(task, source) {
   const labelClass = source === 'A' ? 'left' : 'right';
   const labelText = source === 'A' ? leagueAName : leagueBName;
   return `
-    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml(task.area.toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
+    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml((task.area || 'General').toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(task.name)}</span>
         <span class="unique-label ${labelClass}">${escHtml(labelText)}</span>
@@ -805,6 +837,33 @@ function renderUniqueCard(task, source) {
         <span class="task-pts">${task.points} pts</span>
       </div>
     </div>`;
+}
+
+function renderUniqueColumn() {
+  const colUnique = document.getElementById('colUnique');
+  const list = activeUniqueTab === 'old' ? uniqueTasks.a : uniqueTasks.b;
+  const source = activeUniqueTab === 'old' ? 'A' : 'B';
+
+  if (!list || list.length === 0) {
+    colUnique.innerHTML = '<div class="empty-state">No unique tasks found</div>';
+  } else {
+    colUnique.innerHTML = list.map(t => renderUniqueCard(t, source)).join('');
+  }
+
+  document.getElementById('countUnique').textContent = list ? list.length : 0;
+
+  // Update tab labels with league names
+  const tabs = document.querySelectorAll('.unique-tab');
+  tabs[0].textContent = `Show Old (${leagueAName})`;
+  tabs[1].textContent = `Show New (${leagueBName})`;
+
+  applyFilters();
+}
+
+function switchUniqueTab(tab) {
+  activeUniqueTab = tab;
+  document.querySelectorAll('.unique-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderUniqueColumn();
 }
 
 function renderResults() {
@@ -824,25 +883,10 @@ function renderResults() {
     colSimilar.innerHTML = similarTasks.map(p => renderSimilarCard(p)).join('');
   }
 
-  const allUnique = [
-    ...uniqueTasks.a.map(t => ({ task: t, source: 'A' })),
-    ...uniqueTasks.b.map(t => ({ task: t, source: 'B' })),
-  ];
-  // Sort: A first, then B, each alphabetically
-  allUnique.sort((x, y) => {
-    if (x.source !== y.source) return x.source === 'A' ? -1 : 1;
-    return x.task.name.localeCompare(y.task.name);
-  });
-
-  if (allUnique.length === 0) {
-    colUnique.innerHTML = '<div class="empty-state">No unique tasks found</div>';
-  } else {
-    colUnique.innerHTML = allUnique.map(u => renderUniqueCard(u.task, u.source)).join('');
-  }
+  renderUniqueColumn();
 
   document.getElementById('countSame').textContent = sameTasks.length;
   document.getElementById('countSimilar').textContent = similarTasks.length;
-  document.getElementById('countUnique').textContent = allUnique.length;
 
   applyFilters();
 }
@@ -866,7 +910,7 @@ function toggleRegion(btn) {
 
 function buildRegionButtons() {
   const regions = new Set();
-  [...tasksA, ...tasksB].forEach(t => { if (t.area) regions.add(t.area); });
+  [...tasksA, ...tasksB].forEach(t => { regions.add(t.area || 'General'); });
   const sorted = [...regions].sort();
   activeRegions = new Set(sorted.map(r => r.toLowerCase()));
   const container = document.getElementById('regionFilter');
