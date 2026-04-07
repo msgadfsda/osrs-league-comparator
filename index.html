@@ -465,6 +465,8 @@
     <button class="tier-btn active" data-tier="elite" onclick="toggleTier(this)">Elite</button>
     <button class="tier-btn active" data-tier="master" onclick="toggleTier(this)">Master</button>
   </div>
+  <label style="margin-left:12px">Regions:</label>
+  <div class="tier-filter" id="regionFilter"></div>
   <label style="margin-left:12px">Search:</label>
   <input type="text" class="search-box" id="searchBox" placeholder="Filter tasks..." oninput="applyFilters()">
   <div class="similarity-control">
@@ -506,6 +508,7 @@
 let tasksA = [], tasksB = [];
 let sameTasks = [], similarTasks = [], uniqueTasks = [];
 let activeTiers = new Set(['easy', 'medium', 'hard', 'elite', 'master']);
+let activeRegions = new Set();
 let leagueAName = 'League A', leagueBName = 'League B';
 
 // ── Status helpers ──
@@ -733,7 +736,7 @@ function tierBadge(tier) {
 
 function renderTaskCard(task) {
   return `
-    <div class="task-card" data-tier="${task.tier}" data-name="${escHtml(task.name.toLowerCase())}">
+    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml(task.area.toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(task.name)}</span>
         ${tierBadge(task.tier)}
@@ -770,7 +773,7 @@ function renderSimilarCard(pair) {
   const tierToShow = a.tier || b.tier;
 
   return `
-    <div class="task-card" data-tier="${tierToShow}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
+    <div class="task-card" data-tier="${tierToShow}" data-area="${escHtml((a.area || b.area).toLowerCase())}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(a.name)}</span>
         <span class="similarity-badge">${pct}% match</span>
@@ -792,7 +795,7 @@ function renderUniqueCard(task, source) {
   const labelClass = source === 'A' ? 'left' : 'right';
   const labelText = source === 'A' ? leagueAName : leagueBName;
   return `
-    <div class="task-card" data-tier="${task.tier}" data-name="${escHtml(task.name.toLowerCase())}">
+    <div class="task-card" data-tier="${task.tier}" data-area="${escHtml(task.area.toLowerCase())}" data-name="${escHtml(task.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(task.name)}</span>
         <span class="unique-label ${labelClass}">${escHtml(labelText)}</span>
@@ -855,14 +858,39 @@ function toggleTier(btn) {
   applyFilters();
 }
 
+function toggleRegion(btn) {
+  const region = btn.getAttribute('data-region');
+  btn.classList.toggle('active');
+  if (activeRegions.has(region)) activeRegions.delete(region);
+  else activeRegions.add(region);
+  applyFilters();
+}
+
+function buildRegionButtons() {
+  const regions = new Set();
+  [...tasksA, ...tasksB].forEach(t => { if (t.area) regions.add(t.area); });
+  const sorted = [...regions].sort();
+  activeRegions = new Set(sorted.map(r => r.toLowerCase()));
+  const container = document.getElementById('regionFilter');
+  container.innerHTML = sorted.map(r =>
+    `<button class="tier-btn active" data-region="${escHtml(r.toLowerCase())}" onclick="toggleRegion(this)">${escHtml(r)}</button>`
+  ).join('');
+}
+
 function applyFilters() {
   const search = document.getElementById('searchBox').value.toLowerCase().trim();
+  const allTiers = activeTiers.size === 5;
+  const allRegions = activeRegions.size === document.getElementById('regionFilter').children.length;
+  const filtering = search || !allTiers || !allRegions;
+
   document.querySelectorAll('.task-card').forEach(card => {
     const tier = card.getAttribute('data-tier');
+    const area = card.getAttribute('data-area') || '';
     const name = card.getAttribute('data-name') || '';
     const tierOk = activeTiers.has(tier);
+    const regionOk = activeRegions.has(area);
     const searchOk = !search || name.includes(search) || card.textContent.toLowerCase().includes(search);
-    card.style.display = (tierOk && searchOk) ? '' : 'none';
+    card.style.display = (tierOk && regionOk && searchOk) ? '' : 'none';
   });
 
   // Update visible counts
@@ -871,7 +899,7 @@ function applyFilters() {
     const visible = col.querySelectorAll('.task-card:not([style*="display: none"])').length;
     const countEl = document.getElementById(id.replace('col', 'count'));
     const total = col.querySelectorAll('.task-card').length;
-    countEl.textContent = search || activeTiers.size < 5 ? `${visible}/${total}` : total;
+    countEl.textContent = filtering ? `${visible}/${total}` : total;
   });
 }
 
@@ -909,6 +937,7 @@ async function startCompare() {
     leagueBName = resultB.leagueName;
 
     setStatus(`Comparing ${tasksA.length} (${leagueAName}) vs ${tasksB.length} (${leagueBName}) tasks...`);
+    buildRegionButtons();
 
     // Update column headers with league names
     const headers = document.querySelectorAll('.column-header');
