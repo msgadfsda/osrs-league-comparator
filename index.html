@@ -197,18 +197,6 @@
 
   .search-box:focus { border-color: var(--accent); }
 
-  .similarity-control {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    color: var(--text-dim);
-  }
-
-  .similarity-control input[type="range"] {
-    width: 100px;
-    accent-color: var(--accent);
-  }
 
   .columns {
     display: grid;
@@ -469,11 +457,6 @@
   <div class="tier-filter" id="regionFilter"></div>
   <label style="margin-left:12px">Search:</label>
   <input type="text" class="search-box" id="searchBox" placeholder="Filter tasks..." oninput="applyFilters()">
-  <div class="similarity-control">
-    <label>Similarity threshold:</label>
-    <input type="range" id="simThreshold" min="30" max="90" value="55" oninput="onThresholdChange()">
-    <span id="simValue">55%</span>
-  </div>
 </div>
 
 <div class="columns" id="results">
@@ -659,14 +642,14 @@ function compareTasks(listA, listB, threshold) {
 
   // Index B tasks by normalized name for exact lookup
   const bByName = new Map();
-  for (const t of listB) bByName.set(t.name.toLowerCase().trim(), t);
+  for (const t of listB) bByName.set(norm(t.name).toLowerCase(), t);
 
   const matchedB = new Set();
 
   // Pass 1: exact name matches
   const unmatchedA = [];
   for (const a of listA) {
-    const key = a.name.toLowerCase().trim();
+    const key = norm(a.name).toLowerCase();
     const b = bByName.get(key);
     if (b && !matchedB.has(b.taskId)) {
       matchedB.add(b.taskId);
@@ -692,8 +675,8 @@ function compareTasks(listA, listB, threshold) {
   const candidates = [];
   for (const a of unmatchedA) {
     for (const b of unmatchedB) {
-      const nameScore = diceSimilarity(a.name, b.name);
-      const descScore = diceSimilarity(a.desc, b.desc);
+      const nameScore = diceSimilarity(norm(a.name), norm(b.name));
+      const descScore = diceSimilarity(norm(a.desc), norm(b.desc));
       // Weighted: name matters more
       const score = nameScore * 0.65 + descScore * 0.35;
       if (score >= simThreshold) {
@@ -903,16 +886,8 @@ function applyFilters() {
   });
 }
 
-function onThresholdChange() {
-  const val = document.getElementById('simThreshold').value;
-  document.getElementById('simValue').textContent = val + '%';
-  // Re-compare if we have data
-  if (tasksA.length && tasksB.length) recompare();
-}
-
 function recompare() {
-  const threshold = parseInt(document.getElementById('simThreshold').value, 10);
-  const result = compareTasks(tasksA, tasksB, threshold);
+  const result = compareTasks(tasksA, tasksB, 100);
   sameTasks = result.same;
   similarTasks = result.similar;
   uniqueTasks = { a: result.uniqueA, b: result.uniqueB };
