@@ -159,6 +159,7 @@
   .tier-filter {
     display: flex;
     gap: 4px;
+    flex-wrap: wrap;
   }
 
   .tier-btn {
@@ -654,7 +655,7 @@ function compareTasks(listA, listB, threshold) {
     if (b && !matchedB.has(b.taskId)) {
       matchedB.add(b.taskId);
       // Check if truly identical (same desc, reqs, points)
-      if (fieldsEqual(a.desc, b.desc) && a.points === b.points && fieldsEqual(a.area, b.area)) {
+      if (fieldsEqual(a.desc, b.desc) && fieldsEqual(a.area, b.area)) {
         same.push({ a, b });
       } else {
         similar.push({ a, b, score: 1.0 });
@@ -750,7 +751,6 @@ function renderSimilarCard(pair) {
   if (!fieldsEqual(a.name, b.name)) diffs += renderDiffField('Name', a.name, b.name);
   if (!fieldsEqual(a.desc, b.desc)) diffs += renderDiffField('Description', a.desc, b.desc);
   if (!fieldsEqual(a.area, b.area)) diffs += renderDiffField('Area', a.area, b.area);
-  if (a.points !== b.points) diffs += renderDiffField('Points', `${a.points} pts`, `${b.points} pts`);
   if (a.tier !== b.tier) diffs += renderDiffField('Tier', a.tier, b.tier);
 
   const tierToShow = a.tier || b.tier;
