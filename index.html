@@ -496,7 +496,7 @@
   <label style="margin-left:12px">Regions:</label>
   <div class="tier-filter" id="regionFilter"></div>
   <label style="margin-left:12px">Search:</label>
-  <input type="text" class="search-box" id="searchBox" placeholder="Filter tasks..." oninput="applyFilters()">
+  <input type="text" class="search-box" id="searchBox" placeholder="Filter tasks..." oninput="applyFilters(); saveFilters()">
 </div>
 
 <div class="columns" id="results">
@@ -538,6 +538,49 @@ let activeTiers = new Set(['easy', 'medium', 'hard', 'elite', 'master']);
 let activeRegions = new Set();
 let activeUniqueTab = 'old';
 let leagueAName = 'League A', leagueBName = 'League B';
+
+// ── Persistence ──
+function saveFilters() {
+  localStorage.setItem('lc-filters', JSON.stringify({
+    tiers: [...activeTiers],
+    regions: [...activeRegions],
+    search: document.getElementById('searchBox').value,
+    tab: activeUniqueTab,
+    urlA: document.getElementById('urlA').value,
+    urlB: document.getElementById('urlB').value,
+  }));
+}
+
+function loadFilters() {
+  try { return JSON.parse(localStorage.getItem('lc-filters')); } catch { return null; }
+}
+
+function restoreFilters() {
+  const saved = loadFilters();
+  if (!saved) return;
+
+  // Tiers
+  if (saved.tiers) {
+    activeTiers = new Set(saved.tiers);
+    document.querySelectorAll('#tierFilter .tier-btn').forEach(btn => {
+      btn.classList.toggle('active', activeTiers.has(btn.dataset.tier));
+    });
+  }
+
+  // Regions
+  if (saved.regions) {
+    activeRegions = new Set(saved.regions);
+    document.querySelectorAll('#regionFilter .tier-btn').forEach(btn => {
+      btn.classList.toggle('active', activeRegions.has(btn.dataset.region));
+    });
+  }
+
+  // Search
+  if (saved.search) document.getElementById('searchBox').value = saved.search;
+
+  // Unique tab
+  if (saved.tab) switchUniqueTab(saved.tab);
+}
 
 // ── Status helpers ──
 function setStatus(msg, isError) {
@@ -864,6 +907,7 @@ function switchUniqueTab(tab) {
   activeUniqueTab = tab;
   document.querySelectorAll('.unique-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   renderUniqueColumn();
+  saveFilters();
 }
 
 function renderResults() {
@@ -898,6 +942,7 @@ function toggleTier(btn) {
   if (activeTiers.has(tier)) activeTiers.delete(tier);
   else activeTiers.add(tier);
   applyFilters();
+  saveFilters();
 }
 
 function toggleRegion(btn) {
@@ -906,6 +951,7 @@ function toggleRegion(btn) {
   if (activeRegions.has(region)) activeRegions.delete(region);
   else activeRegions.add(region);
   applyFilters();
+  saveFilters();
 }
 
 function buildRegionButtons() {
@@ -972,6 +1018,7 @@ async function startCompare() {
 
     setStatus(`Comparing ${tasksA.length} (${leagueAName}) vs ${tasksB.length} (${leagueBName}) tasks...`);
     buildRegionButtons();
+    restoreFilters();
 
     // Update column headers with league names
     const headers = document.querySelectorAll('.column-header');
@@ -989,6 +1036,15 @@ async function startCompare() {
     btn.disabled = false;
   }
 }
+
+// ── Restore URLs on load ──
+(function() {
+  const saved = loadFilters();
+  if (saved) {
+    if (saved.urlA) document.getElementById('urlA').value = saved.urlA;
+    if (saved.urlB) document.getElementById('urlB').value = saved.urlB;
+  }
+})();
 </script>
 </body>
 </html>
