@@ -742,8 +742,6 @@ function renderTaskCard(task) {
       <div class="task-meta">
         <span class="task-area">${escHtml(task.area)}</span>
         <span class="task-pts">${task.points} pts</span>
-        ${task.requirements ? `<span>Reqs: ${escHtml(task.requirements)}</span>` : ''}
-        ${task.compPct ? `<span>${escHtml(task.compPct)}</span>` : ''}
       </div>
     </div>`;
 }
@@ -804,7 +802,6 @@ function renderUniqueCard(task, source) {
       <div class="task-meta">
         <span class="task-area">${escHtml(task.area)}</span>
         <span class="task-pts">${task.points} pts</span>
-        ${task.requirements ? `<span>Reqs: ${escHtml(task.requirements)}</span>` : ''}
       </div>
     </div>`;
 }
