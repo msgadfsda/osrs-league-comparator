@@ -49,6 +49,12 @@
 
   header p { color: var(--text-dim); font-size: 0.85rem; }
 
+  .export-btn {
+    margin-top: 10px;
+    padding: 6px 18px;
+    font-size: 0.82rem;
+  }
+
   .input-section {
     background: var(--surface);
     padding: 20px 24px;
@@ -466,6 +472,7 @@
 <header>
   <h1>OSRS League Task Comparator</h1>
   <p>Compare tasks between two Old School RuneScape league events</p>
+  <button class="btn export-btn" id="exportBtn" onclick="exportCSV()" style="display:none">Export CSV</button>
 </header>
 
 <div class="input-section">
@@ -1028,6 +1035,7 @@ async function startCompare() {
 
     recompare();
     document.getElementById('filterBar').classList.add('visible');
+    document.getElementById('exportBtn').style.display = '';
     setStatus('');
   } catch (err) {
     setStatus('Error: ' + err.message, true);
@@ -1035,6 +1043,43 @@ async function startCompare() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ── CSV Export ──
+function csvEscape(s) {
+  s = String(s);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportCSV() {
+  const rows = [['Category', 'Name', 'Description', 'Area', 'Tier', 'Points', 'Source']];
+
+  for (const p of sameTasks) {
+    rows.push(['Identical', p.a.name, p.a.desc, p.a.area, p.a.tier, p.a.points, 'Both']);
+  }
+
+  for (const p of similarTasks) {
+    rows.push(['Similar (' + leagueAName + ')', p.a.name, p.a.desc, p.a.area, p.a.tier, p.a.points, leagueAName]);
+    rows.push(['Similar (' + leagueBName + ')', p.b.name, p.b.desc, p.b.area, p.b.tier, p.b.points, leagueBName]);
+  }
+
+  for (const t of uniqueTasks.a) {
+    rows.push(['Unique', t.name, t.desc, t.area, t.tier, t.points, leagueAName]);
+  }
+
+  for (const t of uniqueTasks.b) {
+    rows.push(['Unique', t.name, t.desc, t.area, t.tier, t.points, leagueBName]);
+  }
+
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `league-comparison-${leagueAName}-vs-${leagueBName}.csv`.replace(/\s+/g, '_');
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Restore URLs on load ──
