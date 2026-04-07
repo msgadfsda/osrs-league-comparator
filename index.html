@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSRS League Task Comparator</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #eee;
+    --text-dim: #aab;
+    --border: #2a2a4a;
+    --easy: #3b9e3b;
+    --medium: #c8a820;
+    --hard: #d04040;
+    --elite: #6a5acd;
+    --master: #e94560;
+    --diff-add: #2d5a2d;
+    --diff-remove: #5a2d2d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 20px 24px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), #f0a030);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  header p { color: var(--text-dim); font-size: 0.85rem; }
+
+  .input-section {
+    background: var(--surface);
+    padding: 20px 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 280px;
+    max-width: 500px;
+  }
+
+  .input-group label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .input-group input {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    padding: 10px 28px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status-bar {
+    text-align: center;
+    padding: 10px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .status-bar.error { color: var(--accent); }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .filter-bar {
+    background: var(--surface);
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--border);
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .filter-bar.visible { display: flex; }
+
+  .filter-bar label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .tier-filter {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tier-btn {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+
+  .tier-btn.active {
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .tier-btn.active[data-tier="easy"] { background: var(--easy); }
+  .tier-btn.active[data-tier="medium"] { background: var(--medium); }
+  .tier-btn.active[data-tier="hard"] { background: var(--hard); }
+  .tier-btn.active[data-tier="elite"] { background: var(--elite); }
+  .tier-btn.active[data-tier="master"] { background: var(--master); }
+
+  .search-box {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.82rem;
+    outline: none;
+    width: 200px;
+  }
+
+  .search-box:focus { border-color: var(--accent); }
+
+  .similarity-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+
+  .similarity-control input[type="range"] {
+    width: 100px;
+    accent-color: var(--accent);
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - 220px);
+  }
+
+  .column {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .column:last-child { border-right: none; }
+
+  .column-header {
+    padding: 14px 16px;
+    background: var(--surface2);
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .column-header .count {
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .column-header .count.green { background: var(--easy); }
+  .column-header .count.yellow { background: var(--medium); }
+  .column-header .count.purple { background: var(--accent2); }
+
+  .column-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px;
+  }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    transition: border-color 0.15s;
+    cursor: default;
+  }
+
+  .task-card:hover {
+    border-color: var(--accent);
+  }
+
+  .task-card .task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .task-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #fff;
+  }
+
+  .task-tier {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .task-tier.easy { background: var(--easy); color: #fff; }
+  .task-tier.medium { background: var(--medium); color: #111; }
+  .task-tier.hard { background: var(--hard); color: #fff; }
+  .task-tier.elite { background: var(--elite); color: #fff; }
+  .task-tier.master { background: var(--master); color: #fff; }
+
+  .task-desc {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .task-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 0.72rem;
+    color: #889;
+    flex-wrap: wrap;
+  }
+
+  .task-meta span { white-space: nowrap; }
+
+  .task-area {
+    color: #8ac;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .task-pts { color: #ca8; font-weight: 600; }
+
+  .unique-label {
+    font-size: 0.68rem;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-left: auto;
+  }
+
+  .unique-label.left {
+    background: #2a4a6a;
+    color: #8ac;
+  }
+
+  .unique-label.right {
+    background: #4a2a6a;
+    color: #c8a;
+  }
+
+  /* Diff display */
+  .diff-section {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+
+  .diff-section .diff-header {
+    font-size: 0.7rem;
+    color: #889;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+  }
+
+  .diff-field {
+    margin-bottom: 4px;
+  }
+
+  .diff-field-label {
+    color: #889;
+    font-weight: 600;
+    font-size: 0.72rem;
+  }
+
+  .diff-line {
+    display: block;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  .diff-line.removed {
+    background: var(--diff-remove);
+    color: #f99;
+    text-decoration: line-through;
+    text-decoration-color: #f664;
+  }
+
+  .diff-line.added {
+    background: var(--diff-add);
+    color: #9f9;
+  }
+
+  .diff-line.same {
+    color: var(--text-dim);
+  }
+
+  .similarity-badge {
+    font-size: 0.65rem;
+    color: #889;
+    font-weight: 600;
+    background: var(--bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+
+  /* Responsive */
+  @media (max-width: 1000px) {
+    .columns {
+      grid-template-columns: 1fr;
+    }
+    .column {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: 60vh;
+    }
+  }
+
+  /* Scrollbar */
+  .column-body::-webkit-scrollbar { width: 6px; }
+  .column-body::-webkit-scrollbar-track { background: transparent; }
+  .column-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .column-body::-webkit-scrollbar-thumb:hover { background: #444; }
+
+  .empty-state {
+    text-align: center;
+    color: #556;
+    padding: 40px 20px;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OSRS League Task Comparator</h1>
+  <p>Compare tasks between two Old School RuneScape league events</p>
+</header>
+
+<div class="input-section">
+  <div class="input-group">
+    <label>League A</label>
+    <input type="text" id="urlA" placeholder="https://oldschool.runescape.wiki/w/.../Tasks"
+      value="https://oldschool.runescape.wiki/w/Trailblazer_Reloaded_League/Tasks">
+  </div>
+  <div class="input-group">
+    <label>League B</label>
+    <input type="text" id="urlB" placeholder="https://oldschool.runescape.wiki/w/.../Tasks"
+      value="https://oldschool.runescape.wiki/w/Raging_Echoes_League/Tasks">
+  </div>
+  <button class="btn" id="compareBtn" onclick="startCompare()">Compare</button>
+</div>
+
+<div class="status-bar" id="status"></div>
+
+<div class="filter-bar" id="filterBar">
+  <label>Tiers:</label>
+  <div class="tier-filter" id="tierFilter">
+    <button class="tier-btn active" data-tier="easy" onclick="toggleTier(this)">Easy</button>
+    <button class="tier-btn active" data-tier="medium" onclick="toggleTier(this)">Medium</button>
+    <button class="tier-btn active" data-tier="hard" onclick="toggleTier(this)">Hard</button>
+    <button class="tier-btn active" data-tier="elite" onclick="toggleTier(this)">Elite</button>
+    <button class="tier-btn active" data-tier="master" onclick="toggleTier(this)">Master</button>
+  </div>
+  <label style="margin-left:12px">Search:</label>
+  <input type="text" class="search-box" id="searchBox" placeholder="Filter tasks..." oninput="applyFilters()">
+  <div class="similarity-control">
+    <label>Similarity threshold:</label>
+    <input type="range" id="simThreshold" min="30" max="90" value="55" oninput="onThresholdChange()">
+    <span id="simValue">55%</span>
+  </div>
+</div>
+
+<div class="columns" id="results">
+  <div class="column">
+    <div class="column-header">
+      Identical Tasks <span class="count green" id="countSame">0</span>
+    </div>
+    <div class="column-body" id="colSame">
+      <div class="empty-state">Enter two league URLs and click Compare</div>
+    </div>
+  </div>
+  <div class="column">
+    <div class="column-header">
+      Similar Tasks (with diff) <span class="count yellow" id="countSimilar">0</span>
+    </div>
+    <div class="column-body" id="colSimilar">
+      <div class="empty-state">Tasks with matching names but different details</div>
+    </div>
+  </div>
+  <div class="column">
+    <div class="column-header">
+      Unique Tasks <span class="count purple" id="countUnique">0</span>
+    </div>
+    <div class="column-body" id="colUnique">
+      <div class="empty-state">Tasks found in only one league</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let tasksA = [], tasksB = [];
+let sameTasks = [], similarTasks = [], uniqueTasks = [];
+let activeTiers = new Set(['easy', 'medium', 'hard', 'elite', 'master']);
+let leagueAName = 'League A', leagueBName = 'League B';
+
+// ── Status helpers ──
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.className = 'status-bar' + (isError ? ' error' : '');
+  el.innerHTML = msg ? (isError ? msg : `<span class="spinner"></span> ${msg}`) : '';
+}
+
+// ── URL → wiki API page name ──
+function extractPageName(url) {
+  url = url.trim();
+  const m = url.match(/oldschool\.runescape\.wiki\/w\/(.+)/);
+  if (m) return decodeURIComponent(m[1].replace(/#.*/, ''));
+  // Maybe they pasted just the page name
+  if (!url.startsWith('http')) return url;
+  throw new Error('Could not parse wiki URL: ' + url);
+}
+
+function extractLeagueName(pageName) {
+  // "Trailblazer_Reloaded_League/Tasks" → "Trailblazer Reloaded"
+  return pageName.replace(/_/g, ' ').replace(/\/Tasks.*/, '').replace(/\s*League\s*$/, '').trim();
+}
+
+// ── Fetch & parse ──
+async function fetchTasks(url) {
+  const pageName = extractPageName(url);
+  const apiUrl = `https://oldschool.runescape.wiki/api.php?action=parse&page=${encodeURIComponent(pageName)}&prop=text&format=json&origin=*`;
+  const resp = await fetch(apiUrl);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${pageName}`);
+  const data = await resp.json();
+  if (data.error) throw new Error(`Wiki API error: ${data.error.info}`);
+  const html = data.parse.text['*'];
+  return { tasks: parseTasksFromHTML(html), leagueName: extractLeagueName(pageName) };
+}
+
+function parseTasksFromHTML(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Find the main task table - has class "tbrl-tasks"
+  let table = doc.querySelector('table.tbrl-tasks');
+  if (!table) {
+    // Fallback: find by looking for tables with data-taskid rows
+    const tables = doc.querySelectorAll('table');
+    for (const t of tables) {
+      if (t.querySelector('tr[data-taskid]')) { table = t; break; }
+    }
+  }
+  if (!table) throw new Error('Could not find task table in page');
+
+  // Also check all region checkboxes by finding the filter table
+  // (Not needed for API parsing - all rows are always present)
+
+  const rows = table.querySelectorAll('tr[data-taskid]');
+  const tasks = [];
+
+  for (const row of rows) {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 5) continue;
+
+    const taskId = row.getAttribute('data-taskid');
+    const area = row.getAttribute('data-tbz-area-for-filtering') || '';
+
+    // Name (col 2, index 1)
+    const name = cells[1]?.textContent?.trim() || '';
+
+    // Description (col 3, index 2)
+    const desc = cells[2]?.textContent?.trim() || '';
+
+    // Requirements (col 4, index 3)
+    const reqCell = cells[3];
+    let requirements = '';
+    if (reqCell) {
+      const scps = reqCell.querySelectorAll('span.scp');
+      if (scps.length > 0) {
+        requirements = Array.from(scps).map(s => {
+          const skill = s.getAttribute('data-skill') || '';
+          const level = s.getAttribute('data-level') || '';
+          return level ? `${level} ${skill}` : skill;
+        }).join(', ');
+      } else if (!reqCell.classList.contains('table-na')) {
+        requirements = reqCell.textContent.trim();
+      }
+    }
+
+    // Points and tier (col 5, index 4)
+    const ptsCell = cells[4];
+    let points = 0;
+    let tier = '';
+    if (ptsCell) {
+      points = parseInt(ptsCell.getAttribute('data-sort-value') || ptsCell.textContent.trim(), 10) || 0;
+      const img = ptsCell.querySelector('img');
+      if (img) {
+        const src = img.getAttribute('src') || img.getAttribute('alt') || '';
+        const tierMatch = src.match(/tasks_-_(\w+)\./i) || src.match(/(Easy|Medium|Hard|Elite|Master)/i);
+        if (tierMatch) tier = tierMatch[1].toLowerCase();
+      }
+      // Fallback: use data attributes on row
+      if (!tier) tier = row.getAttribute('data-lf-tier') || '';
+      // Fallback: infer from points
+      if (!tier) {
+        if (points <= 10) tier = 'easy';
+        else if (points <= 40) tier = 'medium';
+        else if (points <= 80) tier = 'hard';
+        else if (points <= 200) tier = 'elite';
+        else tier = 'master';
+      }
+    }
+
+    // Completion % (col 6, index 5)
+    const compPct = cells[5]?.textContent?.trim() || '';
+
+    tasks.push({ taskId, area, name, desc, requirements, points, tier, compPct });
+  }
+
+  return tasks;
+}
+
+// ── String similarity (Sørensen–Dice on bigrams) ──
+function bigrams(str) {
+  const s = str.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+  const bgs = new Set();
+  for (let i = 0; i < s.length - 1; i++) bgs.add(s.slice(i, i + 2));
+  return bgs;
+}
+
+function diceSimilarity(a, b) {
+  if (a === b) return 1;
+  const bgA = bigrams(a), bgB = bigrams(b);
+  if (bgA.size === 0 && bgB.size === 0) return 1;
+  if (bgA.size === 0 || bgB.size === 0) return 0;
+  let inter = 0;
+  for (const bg of bgA) if (bgB.has(bg)) inter++;
+  return (2 * inter) / (bgA.size + bgB.size);
+}
+
+// ── Normalization (strip periods for comparison) ──
+function norm(s) { return String(s).replace(/\./g, '').trim(); }
+function fieldsEqual(a, b) { return norm(a) === norm(b); }
+
+// ── Comparison logic ──
+function compareTasks(listA, listB, threshold) {
+  const same = [];
+  const similar = [];
+  const uniqueA = [];
+  const uniqueB = [];
+
+  // Index B tasks by normalized name for exact lookup
+  const bByName = new Map();
+  for (const t of listB) bByName.set(t.name.toLowerCase().trim(), t);
+
+  const matchedB = new Set();
+
+  // Pass 1: exact name matches
+  const unmatchedA = [];
+  for (const a of listA) {
+    const key = a.name.toLowerCase().trim();
+    const b = bByName.get(key);
+    if (b && !matchedB.has(b.taskId)) {
+      matchedB.add(b.taskId);
+      // Check if truly identical (same desc, reqs, points)
+      if (fieldsEqual(a.desc, b.desc) && a.points === b.points && fieldsEqual(a.area, b.area)) {
+        same.push({ a, b });
+      } else {
+        similar.push({ a, b, score: 1.0 });
+      }
+    } else {
+      unmatchedA.push(a);
+    }
+  }
+
+  // Pass 2: fuzzy name matching on remaining
+  const unmatchedB = listB.filter(t => !matchedB.has(t.taskId));
+  const simThreshold = threshold / 100;
+
+  const fuzzyMatchedA = new Set();
+  const fuzzyMatchedB = new Set();
+
+  // Build candidate pairs sorted by similarity
+  const candidates = [];
+  for (const a of unmatchedA) {
+    for (const b of unmatchedB) {
+      const nameScore = diceSimilarity(a.name, b.name);
+      const descScore = diceSimilarity(a.desc, b.desc);
+      // Weighted: name matters more
+      const score = nameScore * 0.65 + descScore * 0.35;
+      if (score >= simThreshold) {
+        candidates.push({ a, b, score });
+      }
+    }
+  }
+
+  // Greedy match: best scores first
+  candidates.sort((x, y) => y.score - x.score);
+  for (const c of candidates) {
+    if (fuzzyMatchedA.has(c.a.taskId) || fuzzyMatchedB.has(c.b.taskId)) continue;
+    fuzzyMatchedA.add(c.a.taskId);
+    fuzzyMatchedB.add(c.b.taskId);
+    similar.push(c);
+  }
+
+  // Remaining are unique
+  for (const a of unmatchedA) {
+    if (!fuzzyMatchedA.has(a.taskId)) uniqueA.push(a);
+  }
+  for (const b of unmatchedB) {
+    if (!fuzzyMatchedB.has(b.taskId)) uniqueB.push(b);
+  }
+
+  // Sort similar by score descending
+  similar.sort((x, y) => y.score - x.score);
+
+  return { same, similar, uniqueA, uniqueB };
+}
+
+// ── Rendering ──
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function tierBadge(tier) {
+  return `<span class="task-tier ${tier}">${tier}</span>`;
+}
+
+function renderTaskCard(task) {
+  return `
+    <div class="task-card" data-tier="${task.tier}" data-name="${escHtml(task.name.toLowerCase())}">
+      <div class="task-top">
+        <span class="task-name">${escHtml(task.name)}</span>
+        ${tierBadge(task.tier)}
+      </div>
+      <div class="task-desc">${escHtml(task.desc)}</div>
+      <div class="task-meta">
+        <span class="task-area">${escHtml(task.area)}</span>
+        <span class="task-pts">${task.points} pts</span>
+        ${task.requirements ? `<span>Reqs: ${escHtml(task.requirements)}</span>` : ''}
+        ${task.compPct ? `<span>${escHtml(task.compPct)}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderDiffField(label, valA, valB) {
+  if (valA === valB) return '';
+  return `
+    <div class="diff-field">
+      <span class="diff-field-label">${escHtml(label)}:</span>
+      <span class="diff-line removed">${escHtml(String(valA))}</span>
+      <span class="diff-line added">${escHtml(String(valB))}</span>
+    </div>`;
+}
+
+function renderSimilarCard(pair) {
+  const { a, b, score } = pair;
+  const pct = Math.round(score * 100);
+  let diffs = '';
+
+  if (!fieldsEqual(a.name, b.name)) diffs += renderDiffField('Name', a.name, b.name);
+  if (!fieldsEqual(a.desc, b.desc)) diffs += renderDiffField('Description', a.desc, b.desc);
+  if (!fieldsEqual(a.area, b.area)) diffs += renderDiffField('Area', a.area, b.area);
+  if (a.points !== b.points) diffs += renderDiffField('Points', `${a.points} pts`, `${b.points} pts`);
+  if (a.tier !== b.tier) diffs += renderDiffField('Tier', a.tier, b.tier);
+
+  const tierToShow = a.tier || b.tier;
+
+  return `
+    <div class="task-card" data-tier="${tierToShow}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
+      <div class="task-top">
+        <span class="task-name">${escHtml(a.name)}</span>
+        <span class="similarity-badge">${pct}% match</span>
+        ${tierBadge(tierToShow)}
+      </div>
+      <div class="task-desc">${escHtml(a.desc)}</div>
+      ${diffs ? `<div class="diff-section">
+        <div class="diff-header">${escHtml(leagueAName)} → ${escHtml(leagueBName)}</div>
+        ${diffs}
+      </div>` : ''}
+      <div class="task-meta">
+        <span class="task-area">${escHtml(a.area)}</span>
+        <span class="task-pts">${a.points} pts</span>
+      </div>
+    </div>`;
+}
+
+function renderUniqueCard(task, source) {
+  const labelClass = source === 'A' ? 'left' : 'right';
+  const labelText = source === 'A' ? leagueAName : leagueBName;
+  return `
+    <div class="task-card" data-tier="${task.tier}" data-name="${escHtml(task.name.toLowerCase())}">
+      <div class="task-top">
+        <span class="task-name">${escHtml(task.name)}</span>
+        <span class="unique-label ${labelClass}">${escHtml(labelText)}</span>
+        ${tierBadge(task.tier)}
+      </div>
+      <div class="task-desc">${escHtml(task.desc)}</div>
+      <div class="task-meta">
+        <span class="task-area">${escHtml(task.area)}</span>
+        <span class="task-pts">${task.points} pts</span>
+        ${task.requirements ? `<span>Reqs: ${escHtml(task.requirements)}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderResults() {
+  const colSame = document.getElementById('colSame');
+  const colSimilar = document.getElementById('colSimilar');
+  const colUnique = document.getElementById('colUnique');
+
+  if (sameTasks.length === 0) {
+    colSame.innerHTML = '<div class="empty-state">No identical tasks found</div>';
+  } else {
+    colSame.innerHTML = sameTasks.map(p => renderTaskCard(p.a)).join('');
+  }
+
+  if (similarTasks.length === 0) {
+    colSimilar.innerHTML = '<div class="empty-state">No similar tasks found</div>';
+  } else {
+    colSimilar.innerHTML = similarTasks.map(p => renderSimilarCard(p)).join('');
+  }
+
+  const allUnique = [
+    ...uniqueTasks.a.map(t => ({ task: t, source: 'A' })),
+    ...uniqueTasks.b.map(t => ({ task: t, source: 'B' })),
+  ];
+  // Sort: A first, then B, each alphabetically
+  allUnique.sort((x, y) => {
+    if (x.source !== y.source) return x.source === 'A' ? -1 : 1;
+    return x.task.name.localeCompare(y.task.name);
+  });
+
+  if (allUnique.length === 0) {
+    colUnique.innerHTML = '<div class="empty-state">No unique tasks found</div>';
+  } else {
+    colUnique.innerHTML = allUnique.map(u => renderUniqueCard(u.task, u.source)).join('');
+  }
+
+  document.getElementById('countSame').textContent = sameTasks.length;
+  document.getElementById('countSimilar').textContent = similarTasks.length;
+  document.getElementById('countUnique').textContent = allUnique.length;
+
+  applyFilters();
+}
+
+// ── Filtering ──
+function toggleTier(btn) {
+  const tier = btn.getAttribute('data-tier');
+  btn.classList.toggle('active');
+  if (activeTiers.has(tier)) activeTiers.delete(tier);
+  else activeTiers.add(tier);
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchBox').value.toLowerCase().trim();
+  document.querySelectorAll('.task-card').forEach(card => {
+    const tier = card.getAttribute('data-tier');
+    const name = card.getAttribute('data-name') || '';
+    const tierOk = activeTiers.has(tier);
+    const searchOk = !search || name.includes(search) || card.textContent.toLowerCase().includes(search);
+    card.style.display = (tierOk && searchOk) ? '' : 'none';
+  });
+
+  // Update visible counts
+  ['colSame', 'colSimilar', 'colUnique'].forEach(id => {
+    const col = document.getElementById(id);
+    const visible = col.querySelectorAll('.task-card:not([style*="display: none"])').length;
+    const countEl = document.getElementById(id.replace('col', 'count'));
+    const total = col.querySelectorAll('.task-card').length;
+    countEl.textContent = search || activeTiers.size < 5 ? `${visible}/${total}` : total;
+  });
+}
+
+function onThresholdChange() {
+  const val = document.getElementById('simThreshold').value;
+  document.getElementById('simValue').textContent = val + '%';
+  // Re-compare if we have data
+  if (tasksA.length && tasksB.length) recompare();
+}
+
+function recompare() {
+  const threshold = parseInt(document.getElementById('simThreshold').value, 10);
+  const result = compareTasks(tasksA, tasksB, threshold);
+  sameTasks = result.same;
+  similarTasks = result.similar;
+  uniqueTasks = { a: result.uniqueA, b: result.uniqueB };
+  renderResults();
+}
+
+// ── Main ──
+async function startCompare() {
+  const urlA = document.getElementById('urlA').value;
+  const urlB = document.getElementById('urlB').value;
+  if (!urlA || !urlB) { setStatus('Please enter both URLs', true); return; }
+
+  const btn = document.getElementById('compareBtn');
+  btn.disabled = true;
+
+  try {
+    setStatus('Fetching tasks from both leagues...');
+    const [resultA, resultB] = await Promise.all([fetchTasks(urlA), fetchTasks(urlB)]);
+    tasksA = resultA.tasks;
+    tasksB = resultB.tasks;
+    leagueAName = resultA.leagueName;
+    leagueBName = resultB.leagueName;
+
+    setStatus(`Comparing ${tasksA.length} (${leagueAName}) vs ${tasksB.length} (${leagueBName}) tasks...`);
+
+    // Update column headers with league names
+    const headers = document.querySelectorAll('.column-header');
+    headers[0].childNodes[0].textContent = 'Identical Tasks ';
+    headers[1].childNodes[0].textContent = 'Similar Tasks (with diff) ';
+    headers[2].childNodes[0].textContent = 'Unique Tasks ';
+
+    recompare();
+    document.getElementById('filterBar').classList.add('visible');
+    setStatus('');
+  } catch (err) {
+    setStatus('Error: ' + err.message, true);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
