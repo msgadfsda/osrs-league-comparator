@@ -715,8 +715,13 @@ function compareTasks(listA, listB, threshold) {
     if (!fuzzyMatchedB.has(b.taskId)) uniqueB.push(b);
   }
 
-  // Sort similar by score descending
-  similar.sort((x, y) => y.score - x.score);
+  const tierOrder = { easy: 0, medium: 1, hard: 2, elite: 3, master: 4 };
+  const byTier = (a, b) => (tierOrder[a.tier] ?? 5) - (tierOrder[b.tier] ?? 5);
+
+  same.sort((x, y) => byTier(x.a, y.a));
+  similar.sort((x, y) => byTier(x.a, y.a));
+  uniqueA.sort(byTier);
+  uniqueB.sort(byTier);
 
   return { same, similar, uniqueA, uniqueB };
 }
@@ -756,8 +761,7 @@ function renderDiffField(label, valA, valB) {
 }
 
 function renderSimilarCard(pair) {
-  const { a, b, score } = pair;
-  const pct = Math.round(score * 100);
+  const { a, b } = pair;
   let diffs = '';
 
   if (!fieldsEqual(a.name, b.name)) diffs += renderDiffField('Name', a.name, b.name);
@@ -771,7 +775,6 @@ function renderSimilarCard(pair) {
     <div class="task-card" data-tier="${tierToShow}" data-area="${escHtml((a.area || b.area).toLowerCase())}" data-name="${escHtml(a.name.toLowerCase())} ${escHtml(b.name.toLowerCase())}">
       <div class="task-top">
         <span class="task-name">${escHtml(a.name)}</span>
-        <span class="similarity-badge">${pct}% match</span>
         ${tierBadge(tierToShow)}
       </div>
       <div class="task-desc">${escHtml(a.desc)}</div>
