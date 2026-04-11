@@ -740,6 +740,8 @@ function compareTasks(listA, listB, threshold) {
   const bByName = new Map();
   for (const t of listB) bByName.set(norm(t.name).toLowerCase(), t);
 
+  // Track matches by object identity — some wiki pages reuse data-taskid="0"
+  // for every row, so taskId-keyed sets would collapse the whole comparison.
   const matchedB = new Set();
 
   // Pass 1: exact name matches
@@ -747,8 +749,8 @@ function compareTasks(listA, listB, threshold) {
   for (const a of listA) {
     const key = norm(a.name).toLowerCase();
     const b = bByName.get(key);
-    if (b && !matchedB.has(b.taskId)) {
-      matchedB.add(b.taskId);
+    if (b && !matchedB.has(b)) {
+      matchedB.add(b);
       // Check if truly identical (same desc, reqs, points)
       if (fieldsEqual(a.desc, b.desc) && fieldsEqual(a.area, b.area)) {
         same.push({ a, b });
@@ -761,7 +763,7 @@ function compareTasks(listA, listB, threshold) {
   }
 
   // Pass 2: fuzzy name matching on remaining
-  const unmatchedB = listB.filter(t => !matchedB.has(t.taskId));
+  const unmatchedB = listB.filter(t => !matchedB.has(t));
   const simThreshold = threshold / 100;
 
   const fuzzyMatchedA = new Set();
@@ -784,18 +786,18 @@ function compareTasks(listA, listB, threshold) {
   // Greedy match: best scores first
   candidates.sort((x, y) => y.score - x.score);
   for (const c of candidates) {
-    if (fuzzyMatchedA.has(c.a.taskId) || fuzzyMatchedB.has(c.b.taskId)) continue;
-    fuzzyMatchedA.add(c.a.taskId);
-    fuzzyMatchedB.add(c.b.taskId);
+    if (fuzzyMatchedA.has(c.a) || fuzzyMatchedB.has(c.b)) continue;
+    fuzzyMatchedA.add(c.a);
+    fuzzyMatchedB.add(c.b);
     similar.push(c);
   }
 
   // Remaining are unique
   for (const a of unmatchedA) {
-    if (!fuzzyMatchedA.has(a.taskId)) uniqueA.push(a);
+    if (!fuzzyMatchedA.has(a)) uniqueA.push(a);
   }
   for (const b of unmatchedB) {
-    if (!fuzzyMatchedB.has(b.taskId)) uniqueB.push(b);
+    if (!fuzzyMatchedB.has(b)) uniqueB.push(b);
   }
 
   const tierOrder = { easy: 0, medium: 1, hard: 2, elite: 3, master: 4 };
