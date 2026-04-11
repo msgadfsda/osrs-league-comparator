@@ -649,7 +649,8 @@ function parseTasksFromHTML(html) {
     if (cells.length < 5) continue;
 
     const taskId = row.getAttribute('data-taskid');
-    const area = row.getAttribute('data-tbz-area-for-filtering') || '';
+    const rawArea = row.getAttribute('data-league-area-for-filtering') || '';
+    const area = rawArea ? rawArea.charAt(0).toUpperCase() + rawArea.slice(1) : '';
 
     // Name (col 2, index 1)
     const name = cells[1]?.textContent?.trim() || '';
